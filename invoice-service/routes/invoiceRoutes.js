@@ -1,11 +1,9 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
+const invoiceController = require("../controllers/invoiceController");
 
-// Import correct du controller
-const invoiceController = require('../controllers/invoiceController');
-
-router.post('/', invoiceController.createInvoice);
-router.get('/', invoiceController.getInvoices);
-router.get('/:id', invoiceController.getInvoiceById);
+router.post("/", invoiceController.createInvoice);
+router.get("/", invoiceController.getInvoices);
+router.get("/:id", invoiceController.getInvoiceById);
 
 module.exports = router;
