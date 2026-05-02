@@ -1,0 +1,100 @@
+# ============================================================
+# docker-compose.yml - Stack ERP Microservices complète
+# Master 1 ISI 2026
+#
+# Services inclus :
+#   - product-service  (port 3001)
+#   - mongo            (base de données du Product Service)
+#   - mongo-express    (interface admin MongoDB)
+#
+# Démarrage : docker-compose up -d
+# Arrêt     : docker-compose down
+# Logs      : docker-compose logs -f product-service
+# ============================================================
+
+version: '3.9'
+
+networks:
+  erp-network:
+    driver: bridge
+    # Réseau isolé : principe de couplage faible entre services
+    # Chaque service ne communique qu'avec ses dépendances directes
+
+volumes:
+  product-mongo-data:
+    # Volume persistant : les données survivent aux redémarrages
+
+services:
+
+  # ──────────────────────────────────────────────
+  # Product Service - Notre microservice
+  # ──────────────────────────────────────────────
+  product-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: erp-product-service
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - MONGO_URI=mongodb://mongo:27017/product_service_db
+      - LOW_STOCK_THRESHOLD=10
+      - SERVICE_NAME=product-service
+      - SERVICE_VERSION=1.0.0
+    depends_on:
+      mongo:
+        condition: service_healthy
+    networks:
+      - erp-network
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  # ──────────────────────────────────────────────
+  # MongoDB - Base de données du Product Service
+  # Principe : chaque microservice possède SA propre base
+  # (Database per Service Pattern)
+  # ──────────────────────────────────────────────
+  mongo:
+    image: mongo:7.0
+    container_name: erp-product-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"  # Exposé pour le développement local
+    volumes:
+      - product-mongo-data:/data/db
+    networks:
+      - erp-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ──────────────────────────────────────────────
+  # Mongo Express - Interface d'administration
+  # Accessible sur http://localhost:8081
+  # ──────────────────────────────────────────────
+  mongo-express:
+    image: mongo-express:1.0.2
+    container_name: erp-mongo-express
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      - ME_CONFIG_MONGODB_SERVER=mongo
+      - ME_CONFIG_MONGODB_PORT=27017
+      - ME_CONFIG_BASICAUTH_USERNAME=admin
+      - ME_CONFIG_BASICAUTH_PASSWORD=admin123
+    depends_on:
+      mongo:
+        condition: service_healthy
+    networks:
+      - erp-network
