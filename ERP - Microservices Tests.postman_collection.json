@@ -1,0 +1,349 @@
+{
+  "info": {
+    "_postman_id": "845782eb-5f51-4ea3-8509-b4972dc970d1",
+    "name": "ERP - Microservices Tests",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "54466616",
+    "_collection_link": "https://go.postman.co/collection/54466616-845782eb-5f51-4ea3-8509-b4972dc970d1?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "Invoice Service",
+      "item": [
+        {
+          "name": "All Invoices",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3004/api/invoices?",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3004",
+              "path": [
+                "api",
+                "invoices"
+              ],
+              "query": [
+                {
+                  "key": null,
+                  "value": null,
+                  "description": "Affiche toutes les factures émises, triées par date (de la plus récente à la plus ancienne).\n\n",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Invoice",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"67a1b2c3d4e5f67890123456\",\n  \"customerId\": \"67a1b2c3d4e5f67890123457\",\n  \"amount\": 2450.75\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3004/api/invoices?",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3004",
+              "path": [
+                "api",
+                "invoices"
+              ],
+              "query": [
+                {
+                  "key": null,
+                  "value": null,
+                  "description": "Génère une facture après création d’une commande. Reprend le customerId, orderId et le montant total.\n\n",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Invoice By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3004/api/invoices/67a1b2c3d4e5f67890123458?",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3004",
+              "path": [
+                "api",
+                "invoices",
+                "67a1b2c3d4e5f67890123458"
+              ],
+              "query": [
+                {
+                  "key": null,
+                  "value": null,
+                  "description": "Récupère une facture spécifique à partir de son identifiant unique. Utile pour le détail d’une vente.",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Customer Service",
+      "item": [
+        {
+          "name": "Create Customer",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ahmed Wassim\",\n  \"email\": \"waseem@example.com\",\n  \"phone\": \"0555123456\",\n  \"address\": \"El Hadjar, Annaba\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3001/api/customers?",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3001",
+              "path": [
+                "api",
+                "customers"
+              ],
+              "query": [
+                {
+                  "key": null,
+                  "value": null,
+                  "description": "Crée un nouveau client dans la base MongoDB. Les informations minimales sont : name, email, phone, address. La réponse renvoie l’ID client généré automatiquement.",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "All Customers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3001/api/customers?",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3001",
+              "path": [
+                "api",
+                "customers"
+              ],
+              "query": [
+                {
+                  "key": null,
+                  "value": null,
+                  "description": "Récupère la liste complète de tous les clients enregistrés. Utilisé par la partie frontend et par le service de facturation.",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Product Service",
+      "item": [
+        {
+          "name": "Create Product",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Laptop Dell XPS\",\n  \"category\": \"Ordinateur\",\n  \"price\": 1450,\n  \"quantityInStock\": 25\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3002/api/products?",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3002",
+              "path": [
+                "api",
+                "products"
+              ],
+              "query": [
+                {
+                  "key": null,
+                  "value": null,
+                  "description": "Ajoute un nouveau produit (ex : ordinateur, téléphone). Champs : name, category, price, quantityInStock.",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "All products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3002/api/products?",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3002",
+              "path": [
+                "api",
+                "products"
+              ],
+              "query": [
+                {
+                  "key": null,
+                  "value": null,
+                  "description": "Retourne tous les produits disponibles. Appelé par le frontend et le Order Service.",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Low Stock Products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3002/api/products/low-stock?",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3002",
+              "path": [
+                "api",
+                "products",
+                "low-stock"
+              ],
+              "query": [
+                {
+                  "key": null,
+                  "value": null,
+                  "description": "Affiche les produits dont la quantité en stock est inférieure à 5. Aide à déclencher des commandes d’achat.",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Order Service",
+      "item": [
+        {
+          "name": "Create Order",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": \"METS_UN_ID_CLIENT_ICI\",\n  \"products\": [\n    {\n      \"productId\": \"METS_UN_ID_PRODUIT_ICI\",\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3003/api/orders?",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3003",
+              "path": [
+                "api",
+                "orders"
+              ],
+              "query": [
+                {
+                  "key": null,
+                  "value": null,
+                  "description": "Crée une commande pour un client. Vérifie automatiquement le stock via le Product Service. Si stock suffisant, la commande est validée.",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "All Orders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3003/api/orders?",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3003",
+              "path": [
+                "api",
+                "orders"
+              ],
+              "query": [
+                {
+                  "key": null,
+                  "value": null,
+                  "description": "Liste toutes les commandes passées. Utilisé pour le reporting et le suivi.\n\n",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
