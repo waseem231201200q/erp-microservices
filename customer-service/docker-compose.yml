@@ -1,0 +1,66 @@
+# =============================================
+# docker-compose.yml - Customer Service
+# Environnement de développement local
+# =============================================
+
+version: '3.8'
+
+services:
+
+  customer-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: customer-service
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - MONGODB_URI=mongodb://mongo:27017/customer_service_db
+    depends_on:
+      mongo:
+        condition: service_healthy
+    networks:
+      - erp-network
+
+  mongo:
+    image: mongo:7.0
+    container_name: customer-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - erp-network
+
+  mongo-express:
+    image: mongo-express:latest
+    container_name: customer-mongo-ui
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      - ME_CONFIG_MONGODB_SERVER=mongo
+      - ME_CONFIG_MONGODB_PORT=27017
+      - ME_CONFIG_BASICAUTH_USERNAME=admin
+      - ME_CONFIG_BASICAUTH_PASSWORD=admin123
+    depends_on:
+      - mongo
+    networks:
+      - erp-network
+
+volumes:
+  mongo-data:
+
+networks:
+  erp-network:
+    driver: bridge
+    name: erp-network
