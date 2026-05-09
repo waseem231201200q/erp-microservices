@@ -12,6 +12,15 @@ app.use(express.json());
 
 app.use("/api/orders", orderRoutes);
 
+app.get("/health", (req, res) => {
+  res.json({
+    status: "UP",
+    service: "order-service",
+    port: PORT,
+    timestamp: new Date().toISOString(),
+  });
+});
+
 const PORT = process.env.PORT || 3003;
 
 // HARDCODED URI for Docker environment

@@ -43,23 +43,29 @@ exports.createOrder = async (req, res) => {
         const response = await axios.get(
           `${PRODUCT_SERVICE_URL}/api/products/${item.productId}`,
         );
-        const product = response.data;
+        const product = response.data?.data || response.data;
+
+        if (!product || product.quantityInStock === undefined) {
+          return res
+            .status(404)
+            .json({ message: `Produit ${item.productId} introuvable` });
+        }
+
         if (product.quantityInStock < item.quantity) {
           return res
             .status(400)
             .json({ message: `Stock insuffisant pour ${product.name}` });
         }
+
         totalAmount += product.price * item.quantity;
         verifiedProducts.push({
           productId: item.productId,
           quantity: item.quantity,
         });
       } catch (err) {
-        return res
-          .status(500)
-          .json({
-            message: `Erreur produit ${item.productId}: ${err.message}`,
-          });
+        return res.status(500).json({
+          message: `Erreur produit ${item.productId}: ${err.message}`,
+        });
       }
     }
 

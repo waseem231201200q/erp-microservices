@@ -71,6 +71,27 @@ services:
     depends_on:
       - mongo-invoice
 
+  api-gateway:
+    build: ./api-gateway
+    container_name: api-gateway
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+    depends_on:
+      - customer-service
+      - product-service
+      - order-service
+      - invoice-service
+
+  frontend:
+    build: ./frontend
+    container_name: frontend
+    ports:
+      - "3005:80"
+    depends_on:
+      - api-gateway
+
 volumes:
   mongo-customer-data:
   mongo-product-data:
