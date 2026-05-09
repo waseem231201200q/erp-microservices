@@ -1,0 +1,78 @@
+services:
+  mongo-customer:
+    image: mongo:7
+    container_name: mongo-customer
+    volumes:
+      - mongo-customer-data:/data/db
+
+  mongo-product:
+    image: mongo:7
+    container_name: mongo-product
+    volumes:
+      - mongo-product-data:/data/db
+
+  mongo-order:
+    image: mongo:7
+    container_name: mongo-order
+    volumes:
+      - mongo-order-data:/data/db
+
+  mongo-invoice:
+    image: mongo:7
+    container_name: mongo-invoice
+    volumes:
+      - mongo-invoice-data:/data/db
+
+  customer-service:
+    build: ./customer-service
+    container_name: customer-service
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - MONGO_URI=mongodb://mongo-customer:27017/customer-db
+    depends_on:
+      - mongo-customer
+
+  product-service:
+    build: ./product-service
+    container_name: product-service
+    ports:
+      - "3002:3002"
+    environment:
+      - PORT=3002
+      - MONGO_URI=mongodb://mongo-product:27017/product-db
+    depends_on:
+      - mongo-product
+
+  order-service:
+    build: ./order-service
+    container_name: order-service
+    ports:
+      - "3003:3003"
+    environment:
+      - PORT=3003
+      - MONGO_URI=mongodb://mongo-order:27017/order-db
+      - PRODUCT_SERVICE_URL=http://product-service:3002
+      - INVOICE_SERVICE_URL=http://invoice-service:3004
+    depends_on:
+      - mongo-order
+      - product-service
+      - invoice-service
+
+  invoice-service:
+    build: ./invoice-service
+    container_name: invoice-service
+    ports:
+      - "3004:3004"
+    environment:
+      - PORT=3004
+      - MONGO_URI=mongodb://mongo-invoice:27017/invoice-db
+    depends_on:
+      - mongo-invoice
+
+volumes:
+  mongo-customer-data:
+  mongo-product-data:
+  mongo-order-data:
+  mongo-invoice-data:
