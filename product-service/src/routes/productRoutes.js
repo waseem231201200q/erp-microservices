@@ -113,6 +113,67 @@ router.get(
 );
 
 // ──────────────────────────────────────────────
+// PATCH /api/products/:id/stock-adjust
+// Ajustement atomique du stock (+/-)
+// ──────────────────────────────────────────────
+router.patch(
+  '/:id/stock-adjust',
+  asyncHandler(async (req, res) => {
+    const { delta } = req.body;
+    if (!Number.isInteger(delta)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Le champ delta doit être un entier',
+      });
+    }
+
+    if (delta < 0) {
+      const product = await Product.findOneAndUpdate(
+        {
+          id: req.params.id.toUpperCase(),
+          isActive: true,
+          quantityInStock: { $gte: Math.abs(delta) },
+        },
+        { $inc: { quantityInStock: delta } },
+        { new: true }
+      );
+
+      if (!product) {
+        return res.status(400).json({
+          success: false,
+          message: 'Produit introuvable ou stock insuffisant',
+        });
+      }
+
+      return res.json({
+        success: true,
+        message: 'Stock décrémenté avec succès',
+        data: product,
+      });
+    }
+
+    const product = await Product.findOneAndUpdate(
+      { id: req.params.id.toUpperCase(), isActive: true },
+      { $inc: { quantityInStock: delta } },
+      { new: true }
+    );
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: `Produit "${req.params.id}" introuvable`,
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: 'Stock incrémenté avec succès',
+      data: product,
+    });
+  })
+);
+
+// ──────────────────────────────────────────────
 // GET /api/products/:id
 // Récupérer un produit par son identifiant métier
 // ──────────────────────────────────────────────

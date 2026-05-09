@@ -8,6 +8,8 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const productRoutes = require('./routes/productRoutes');
+const supplierRoutes = require('./routes/supplierRoutes');
+const purchaseOrderRoutes = require('./routes/purchaseOrderRoutes');
 const { errorHandler } = require('./middleware/errorHandler');
 
 const app = express();
@@ -24,7 +26,7 @@ app.use(helmet());
 app.use(
   cors({
     origin: process.env.ALLOWED_ORIGINS?.split(',') || '*',
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
   })
 );
 
@@ -53,6 +55,8 @@ app.get('/health', (req, res) => {
 // Routes métier
 // ──────────────────────────────────────────────
 app.use('/api/products', productRoutes);
+app.use('/api/suppliers', supplierRoutes);
+app.use('/api/purchase-orders', purchaseOrderRoutes);
 
 // 404 - Route non trouvée
 app.use('*', (req, res) => {

@@ -55,6 +55,7 @@ services:
       - MONGO_URI=mongodb://mongo-order:27017/order-db
       - PRODUCT_SERVICE_URL=http://product-service:3002
       - INVOICE_SERVICE_URL=http://invoice-service:3004
+      - CUSTOMER_SERVICE_URL=http://customer-service:3001
     depends_on:
       - mongo-order
       - product-service
@@ -78,6 +79,7 @@ services:
       - "3000:3000"
     environment:
       - PORT=3000
+      - AUTH_SECRET=replace-this-secret-in-production
     depends_on:
       - customer-service
       - product-service

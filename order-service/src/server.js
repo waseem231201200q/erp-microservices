@@ -23,8 +23,7 @@ app.get("/health", (req, res) => {
 
 const PORT = process.env.PORT || 3003;
 
-// HARDCODED URI for Docker environment
-const mongoURI = "mongodb://mongo-order:27017/order-db";
+const mongoURI = process.env.MONGO_URI || "mongodb://mongo-order:27017/order-db";
 mongoose
   .connect(mongoURI)
   .then(() => console.log("✅ Order Service connecté à MongoDB"))

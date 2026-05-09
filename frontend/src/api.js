@@ -9,6 +9,19 @@ const api = axios.create({
   },
 });
 
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("erp_token");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+export async function login(username, password) {
+  const response = await api.post("/auth/login", { username, password });
+  return response.data;
+}
+
 export async function fetchCustomers() {
   const response = await api.get("/customers");
   return response.data.data || response.data;
@@ -29,13 +42,33 @@ export async function fetchInvoices() {
   return response.data.data || response.data;
 }
 
+export async function updateInvoiceStatus(invoiceId, payload) {
+  const response = await api.patch(`/invoices/${invoiceId}/status`, payload);
+  return response.data.invoice || response.data.data || response.data;
+}
+
+export async function fetchDashboardMetrics() {
+  const response = await api.get("/dashboard/metrics");
+  return response.data.data || response.data;
+}
+
 export async function createCustomer(customer) {
   const response = await api.post("/customers", customer);
   return response.data.data || response.data;
 }
 
+export async function deleteCustomer(customerId) {
+  const response = await api.delete(`/customers/${customerId}`);
+  return response.data.data || response.data;
+}
+
 export async function createProduct(product) {
   const response = await api.post("/products", product);
+  return response.data.data || response.data;
+}
+
+export async function deleteProduct(productId) {
+  const response = await api.delete(`/products/${productId}`);
   return response.data.data || response.data;
 }
 
@@ -52,4 +85,34 @@ export async function createOrder(order) {
   };
   const response = await api.post("/orders", payload);
   return response.data.order || response.data.data || response.data;
+}
+
+export async function updateOrderStatus(orderId, status) {
+  const response = await api.patch(`/orders/${orderId}/status`, { status });
+  return response.data.order || response.data.data || response.data;
+}
+
+export async function fetchSuppliers() {
+  const response = await api.get("/suppliers");
+  return response.data.data || response.data;
+}
+
+export async function createSupplier(payload) {
+  const response = await api.post("/suppliers", payload);
+  return response.data.data || response.data;
+}
+
+export async function fetchPurchaseOrders() {
+  const response = await api.get("/purchase-orders");
+  return response.data.data || response.data;
+}
+
+export async function createPurchaseOrder(payload) {
+  const response = await api.post("/purchase-orders", payload);
+  return response.data.data || response.data;
+}
+
+export async function receivePurchaseOrder(id) {
+  const response = await api.patch(`/purchase-orders/${id}/receive`);
+  return response.data.data || response.data;
 }

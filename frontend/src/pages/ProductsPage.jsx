@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { fetchProducts, createProduct } from "../api";
+import { fetchProducts, createProduct, deleteProduct } from "../api";
 
 export default function ProductsPage() {
   const [products, setProducts] = useState([]);
@@ -14,6 +14,8 @@ export default function ProductsPage() {
     quantityInStock: "",
     supplier: "",
   });
+  const [search, setSearch] = useState("");
+  const [deletingId, setDeletingId] = useState(null);
 
   useEffect(() => {
     loadProducts();
@@ -76,6 +78,40 @@ export default function ProductsPage() {
       );
     }
   };
+
+  const handleDelete = async (product) => {
+    const productId = product.id;
+    if (!productId) return;
+
+    const shouldDelete = window.confirm(
+      `Deactivate product "${product.name}" (${productId})?`,
+    );
+    if (!shouldDelete) return;
+
+    setError(null);
+    setSuccess(null);
+    setDeletingId(productId);
+
+    try {
+      await deleteProduct(productId);
+      setProducts((current) => current.filter((item) => item.id !== productId));
+      setSuccess("Product deactivated successfully.");
+    } catch (err) {
+      setError(
+        err.response?.data?.message || err.message || "Failed to delete product",
+      );
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const filteredProducts = products.filter((product) => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return [product.id, product.name, product.category, product.supplier]
+      .filter(Boolean)
+      .some((value) => String(value).toLowerCase().includes(q));
+  });
 
   return (
     <div>
@@ -161,7 +197,16 @@ export default function ProductsPage() {
       </section>
 
       <section>
-        <h3>Product List</h3>
+        <div className="section-header">
+          <h3>Product List</h3>
+          <input
+            type="search"
+            placeholder="Search by code, name, category, supplier"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            className="compact-input"
+          />
+        </div>
         {loading && <p>Loading products...</p>}
         {!loading && !error && (
           <table>
@@ -173,10 +218,11 @@ export default function ProductsPage() {
                 <th>Price</th>
                 <th>Stock</th>
                 <th>Supplier</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {products.map((product) => (
+              {filteredProducts.map((product) => (
                 <tr key={product._id || product.id}>
                   <td>{product.id}</td>
                   <td>{product.name}</td>
@@ -184,6 +230,16 @@ export default function ProductsPage() {
                   <td>{product.price}</td>
                   <td>{product.quantityInStock}</td>
                   <td>{product.supplier || "-"}</td>
+                  <td>
+                    <button
+                      type="button"
+                      className="btn-danger btn-inline"
+                      onClick={() => handleDelete(product)}
+                      disabled={deletingId === product.id}
+                    >
+                      {deletingId === product.id ? "Deleting..." : "Delete"}
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>

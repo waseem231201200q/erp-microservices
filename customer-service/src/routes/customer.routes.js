@@ -192,4 +192,37 @@ router.put("/:id", customerValidationRules(), validate, async (req, res) => {
   }
 });
 
+// ─────────────────────────────────────────────
+// DELETE /api/customers/:id
+// Supprimer un client
+// ─────────────────────────────────────────────
+router.delete("/:id", async (req, res) => {
+  try {
+    const deleted = await Customer.findByIdAndDelete(req.params.id);
+
+    if (!deleted) {
+      return res.status(404).json({
+        success: false,
+        message: `Aucun client trouvé avec l'id : ${req.params.id}`,
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Client supprimé avec succès",
+      data: deleted,
+    });
+  } catch (error) {
+    if (error.name === "CastError") {
+      return res.status(400).json({ success: false, message: "ID invalide" });
+    }
+    console.error("[DELETE /customers/:id]", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Erreur serveur lors de la suppression",
+      error: error.message,
+    });
+  }
+});
+
 module.exports = router;
