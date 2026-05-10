@@ -1,0 +1,322 @@
+% =============================================================================
+% RAPPORT TECHNIQUE — ERP Microservices (distribution de produits électroniques)
+% Compilation : pdfLaTeX (Overleaf : Menu → Compiler → pdfLaTeX)
+% =============================================================================
+
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[french]{babel}
+
+% Police « professionnelle » type Times (courante dans les rapports / mémoires)
+\usepackage{newtxtext}
+\usepackage{newtxmath}
+
+\usepackage{geometry}
+\usepackage{microtype}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{csquotes}
+
+\geometry{margin=2.5cm}
+
+% Titres de sections plus lisibles
+\titleformat{\section}{\large\bfseries}{\thesection.}{0.6em}{}
+\titleformat{\subsection}{\normalsize\bfseries}{\thesubsection}{0.6em}{}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=black,
+  urlcolor=blue!50!black,
+  citecolor=black,
+  pdftitle={ERP Microservices - Rapport technique},
+  pdfauthor={Groupe Master}
+}
+
+\title{\textbf{Système d'information intégré de type ERP}\\[0.35em]
+\large Architecture microservices — Ventes, stocks, achats et facturation}
+
+\author{%
+\textbf{Groupe projet}\\[0.75em]
+\begin{tabular}{c}
+Ahmed Ouassim Bendjeddah \\
+Med Yacine Messahel \\
+Med Yahia Mellouk \\
+Salah Harbi \\
+Seif El Islem Rouabhia
+\end{tabular}
+}
+
+\date{10 mai 2026}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+\noindent
+Ce rapport présente la conception et la réalisation d'un prototype d'ERP pour une entreprise de \textbf{distribution de produits électroniques}. L'objectif est de réduire la dispersion des données (tableurs, supports papier) et d'améliorer la coordination entre les fonctions commerciales, logistiques, d'achat et financières. La solution adoptée s'appuie sur une architecture \emph{microservices} (Node.js, Express), plusieurs bases \textbf{MongoDB} isolées par domaine, une \textbf{API Gateway} assurant authentification et contrôle d'accès par rôles, et une interface web développée avec \textbf{React}. Le document décrit le périmètre fonctionnel, la pile technologique, le détail des services, les flux métier (vente, achat fournisseur, facturation), la matrice des droits utilisateurs, ainsi que les limites du prototype et des pistes d'évolution.
+
+\vspace{0.75em}
+\noindent\textbf{Mots-clés :}
+ERP, microservices, API REST, MongoDB, Docker, React, API Gateway, RBAC, distribution, gestion des stocks, facturation, approvisionnement.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+% -----------------------------------------------------------------------------
+\section{Introduction}
+
+\subsection{Contexte et problématique}
+Les entreprises de distribution gèrent simultanément des flux commerciaux (clients, commandes, devis), logistiques (stocks, mouvements, alertes), d'achat (fournisseurs, commandes fournisseur) et financiers (facturation, encaissements). Lorsque ces informations sont éclatées entre fichiers Excel, documents papier ou outils non reliés, apparaissent des \textbf{erreurs de saisie}, des \textbf{retards de mise à jour} et une \textbf{vision partielle} de l'activité, ce qui complique la prise de décision.
+
+\subsection{Objectif du projet}
+Le projet vise à concevoir et implémenter une \textbf{solution intégrée de type ERP}, volontairement simplifiée mais représentative, en s'appuyant sur une architecture \textbf{découplée} (microservices) et sur une \textbf{interface web} unique pour les opérations courantes. Les objectifs techniques et fonctionnels retenus sont les suivants :
+\begin{itemize}[noitemsep]
+  \item exposer les fonctionnalités via des \textbf{API REST} cohérentes et documentables ;
+  \item isoler la persistance par domaine (\textbf{une base de données par service}) ;
+  \item centraliser l'accès externe via une \textbf{passerelle} avec \textbf{authentification} et \textbf{rôles} ;
+  \item couvrir au minimum : \textbf{clients}, \textbf{produits et stock}, \textbf{commandes de vente}, \textbf{facturation}, et un volet \textbf{achat / approvisionnement} (fournisseurs, bons de commande).
+\end{itemize}
+
+\subsection{Périmètre et positionnement}
+Le travail réalisé correspond à un \textbf{prototype opérationnel} : il démontre l'architecture, les interactions entre services et les flux métiers principaux. Il ne constitue pas un progiciel ERP complet (paie, comptabilité générale, production, CRM avancé, etc.). Les sections suivantes précisent ce qui est \textbf{implémenté}, ce qui est \textbf{volontairement simplifié}, et ce qui pourrait être \textbf{ajouté} ultérieurement.
+
+% -----------------------------------------------------------------------------
+\section{Cadre méthodologique et environnement de travail}
+
+\subsection{Approche de développement}
+Le développement suit une logique \textbf{incrémentale} : chaque microservice expose un contrat REST autonome ; la passerelle agrège la sécurité et le routage ; le frontend consomme uniquement l'API publique (\texttt{/api/...}) via la passerelle. L'exécution cible repose sur la \textbf{conteneurisation} (Docker Compose) afin de reproduire l'environnement sur différentes machines et de faciliter les démonstrations.
+
+\subsection{Outils utilisés}
+\begin{itemize}[noitemsep]
+  \item édition du code et gestion de version (Git) ;
+  \item tests manuels des API : client HTTP (Postman, \texttt{curl}, ou équivalent) ;
+  \item journalisation HTTP côté passerelle (Morgan) pour le diagnostic des appels proxifiés.
+\end{itemize}
+
+% -----------------------------------------------------------------------------
+\section{Analyse des besoins et exigences}
+
+\subsection{Acteurs métier (rôles)}
+Les acteurs suivants sont modélisés dans le système :
+\begin{description}[style=nextline]
+  \item[Administrateur (\texttt{admin})] Super-utilisateur technique et fonctionnel : accès élargi à l'ensemble des modules exposés par la passerelle.
+  \item[Commercial (\texttt{sales})] Gestion de la relation client, des commandes de vente, consultation des produits et factures, suivi d'indicateurs agrégés.
+  \item[Inventaire / logistique (\texttt{inventory})] Gestion des produits, du réapprovisionnement (fournisseurs, bons d'achat), suivi des commandes pour les statuts opérationnels.
+  \item[Comptabilité (\texttt{accounting})] Gestion du cycle facture (statuts, paiement), lecture d'indicateurs financiers agrégés.
+\end{description}
+
+\subsection{Exigences fonctionnelles principales}
+\begin{itemize}[noitemsep]
+  \item \textbf{CRUD clients} avec contrôles de cohérence (unicité d'email, formats).
+  \item \textbf{Catalogue produits} : création, recherche, filtres, alerte stock faible, désactivation logique.
+  \item \textbf{Commandes de vente} : vérification client et produits, calcul de montant, \textbf{mise à jour du stock}, génération ou synchronisation avec la \textbf{facture}.
+  \item \textbf{Statuts de commande} (ex.\ expédiée, livrée, annulée) avec effets sur le stock en cas d'annulation.
+  \item \textbf{Factures} : statuts (\texttt{pending}, \texttt{paid}, \texttt{cancelled}), informations de paiement.
+  \item \textbf{Achats} : référentiel fournisseurs, bons de commande fournisseur, \textbf{réception} augmentant le stock.
+  \item \textbf{Sécurité d'accès} : authentification par jeton et autorisation par rôle sur les préfixes d'API.
+\end{itemize}
+
+\subsection{Exigences non fonctionnelles (niveau prototype)}
+\begin{itemize}[noitemsep]
+  \item \textbf{Modularité} : services déployables séparément ;
+  \item \textbf{Évolutivité} : possibilité d'ajouter un service sans modifier les bases des autres domaines ;
+  \item \textbf{Traçabilité basique} : logs HTTP ; pas d'audit métier exhaustif dans la version actuelle.
+\end{itemize}
+
+% -----------------------------------------------------------------------------
+\section{Architecture logicielle}
+
+\subsection{Principe général}
+L'architecture suit le schéma \textbf{client léger — passerelle — microservices — bases de données}. Le navigateur exécute l'application \textbf{React} (frontend). Celle-ci adresse l'\textbf{API Gateway} (port \texttt{3000} dans la configuration Docker type), unique point d'entrée pour les routes \texttt{/api/...}. La passerelle vérifie le jeton d'authentification, applique les règles de \textbf{rôle}, puis transmet la requête au service interne concerné. Chaque service persiste ses données dans \textbf{sa propre instance MongoDB}, ce qui matérialise le découplage des domaines.
+
+\subsection{Communication inter-services}
+Les services communiquent par \textbf{HTTP REST} (appels depuis le service commande vers les services produit, client et facturation, par exemple). Ce choix privilégie la simplicité de mise en œuvre et l'alignement avec les travaux dirigés sur les architectures microservices en environnement Node.js.
+
+\subsection{Liste des composants déployés}
+\begin{table}[htbp]
+\centering
+\begin{tabular}{@{}llp{6.6cm}@{}}
+\toprule
+\textbf{Composant} & \textbf{Port (hôte type)} & \textbf{Responsabilité} \\
+\midrule
+\texttt{api-gateway} & 3000 & Routage, authentification, RBAC, agrégation métrique tableau de bord \\
+\texttt{customer-service} & 3001 & Cycle de vie des clients, recherche, pagination \\
+\texttt{product-service} & 3002 & Produits, stock, fournisseurs, commandes d'achat (PO) \\
+\texttt{order-service} & 3003 & Commandes clients, statuts, orchestration stock / facture \\
+\texttt{invoice-service} & 3004 & Factures, statuts, données de paiement \\
+\texttt{frontend} & 3005 & Interface utilisateur React \\
+\bottomrule
+\end{tabular}
+\caption{Composants applicatifs et ports d'accès typiques (Docker Compose).}
+\end{table}
+
+\subsection{Bases de données}
+Chaque domaine dispose d'une base MongoDB dédiée, par exemple : \texttt{customer-db}, \texttt{product-db}, \texttt{order-db}, \texttt{invoice-db}. Cette séparation limite les dépendances croisées au niveau du schéma et reflète la logique \textbf{bounded context} des microservices.
+
+% -----------------------------------------------------------------------------
+\section{Pile technologique}
+
+\subsection{Langages et frameworks}
+\begin{description}[style=nextline]
+  \item[Backend] JavaScript côté serveur avec \textbf{Node.js} et le framework \textbf{Express}.
+  \item[Passerelle] Express, \texttt{http-proxy-middleware} pour le proxy inverse ; réécriture du corps des requêtes JSON (\texttt{fixRequestBody}) après parsing afin d'éviter des appels en aval sans contenu.
+  \item[Frontend] \textbf{React 18}, \textbf{Vite}, \textbf{React Router}, \textbf{Axios}.
+  \item[Persistance] \textbf{MongoDB} avec \textbf{Mongoose} pour la modélisation des documents.
+  \item[Déploiement] \textbf{Docker} et \textbf{Docker Compose} pour l'orchestration locale des conteneurs.
+\end{description}
+
+% -----------------------------------------------------------------------------
+\section{Réalisation : fonctionnalités par service}
+
+\subsection{Authentification et API Gateway}
+\begin{itemize}[noitemsep]
+  \item \texttt{POST /api/auth/login} : échange identifiants contre un \texttt{token} et le profil (\texttt{username}, \texttt{role}).
+  \item Jeton \textbf{signé} (HMAC-SHA256, charge utile encodée), avec date d'expiration (ex.\ 24~h).
+  \item Les routes \texttt{/api/...} (hors login et sonde \texttt{/health}) exigent l'en-tête \texttt{Authorization: Bearer <token>}.
+  \item Matrice des rôles sur les préfixes : voir section~\ref{sec:roles}.
+\end{itemize}
+
+\subsection{Service clients}
+Création, lecture paginée avec recherche, lecture par identifiant, mise à jour, suppression. Contrôles sur l'unicité de l'e-mail et normalisation de l'adresse.
+
+\subsection{Service produits}
+Gestion du catalogue (identifiant métier, catégories, prix, quantités), filtres et recherche, endpoint \textbf{stock faible}, désactivation logique (\texttt{isActive}). Ajustement \textbf{atomique} du stock : \texttt{PATCH /api/products/:id/stock-adjust} avec un entier \texttt{delta}, afin de limiter les incohérences en cas d'accès concurrents.
+
+\subsection{Fournisseurs et procurement (achats)}
+Le module \textbf{procurement} représente l'achat \textbf{entreprise \textrightarrow\ fournisseur} : référentiel fournisseurs, \textbf{bon de commande fournisseur} (\emph{Purchase Order}) avec lignes (produit, quantité, prix unitaire), et action de \textbf{réception} qui crédite le stock des produits concernés. Le \textbf{client final} n'utilise pas ce flux : il passe par les \textbf{commandes de vente}.
+
+\subsection{Service commandes (vente)}
+À la création : vérification du client, vérification des produits et prix via le service produit, \textbf{décrémentation} du stock via l'API d'ajustement, enregistrement de la commande, appel au service facturation pour créer une facture liée. Les statuts incluent notamment \texttt{pending}, \texttt{confirmed}, \texttt{shipped}, \texttt{delivered}, \texttt{cancelled}. L'\textbf{annulation} déclenche la \textbf{restitution} du stock et une tentative de mise à jour du statut de la facture associée.
+
+\subsection{Service facturation}
+Création et consultation des factures ; mise à jour de statut (\texttt{pending}, \texttt{paid}, \texttt{cancelled}) ; champs de paiement (date, méthode, référence).
+
+\subsection{Tableau de bord}
+Endpoint \texttt{GET /api/dashboard/metrics} (passerelle) : agrégation d'indicateurs (nombre de commandes, factures, montants payés / en attente, nombre de produits en alerte stock, commandes annulées, etc.).
+
+\subsection{Interface web}
+Pages : connexion, tableau de bord, clients, produits, commandes, factures, procurement. Actions : créations, recherches, suppressions ou désactivations, changements de statuts, gestion des achats et réceptions.
+
+% -----------------------------------------------------------------------------
+\section{Flux métier détaillés}
+\label{sec:flux}
+
+\subsection{Vente : du client à la facture}
+\begin{enumerate}[noitemsep]
+  \item Création ou sélection d'un \textbf{client} (persistance dans \texttt{customer-db}).
+  \item Saisie d'une \textbf{commande de vente} : client, lignes produit / quantités. Le service commande contrôle le stock et le \textbf{décrémente} dans \texttt{product-db}.
+  \item Pilotage logistique : passage aux statuts \textbf{expédié} puis \textbf{livré} selon le processus interne.
+  \item \textbf{Facturation} : création d'une facture liée ; le service comptabilité peut marquer la facture \textbf{payée} ou \textbf{annulée}.
+  \item \textbf{Annulation de commande} : réintégration du stock ; synchronisation visant à annuler la facture liée lorsque c'est pertinent.
+\end{enumerate}
+
+\subsection{Achat (réapprovisionnement)}
+\begin{enumerate}[noitemsep]
+  \item Maintenance du référentiel \textbf{fournisseurs}.
+  \item Émission d'un \textbf{bon de commande fournisseur}.
+  \item \textbf{Réception} : mise à jour des stocks (entrées) dans le service produit.
+\end{enumerate}
+
+\subsection{Rôles « acheteur » et « vendeur » dans le modèle}
+\begin{itemize}[noitemsep]
+  \item Le \textbf{client} \emph{achète} à l'entreprise distributeur via une \textbf{commande de vente}.
+  \item L'\textbf{entreprise distributeur} \emph{achète} aux \textbf{fournisseurs} via le \textbf{procurement} pour alimenter son stock.
+\end{itemize}
+
+% -----------------------------------------------------------------------------
+\section{Rôles, autorisations et interdits (RBAC)}
+\label{sec:roles}
+
+Des comptes de démonstration permettent de tester les profils : \texttt{admin}/\texttt{admin123}, \texttt{sales}/\texttt{sales123}, \texttt{inventory}/\texttt{inventory123}, \texttt{accounting}/\texttt{accounting123}. En production, ces comptes et mots de passe devraient être supprimés ou externalisés vers un annuaire sécurisé.
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabular}{@{}p{2.1cm}p{5.7cm}p{5.7cm}@{}}
+\toprule
+\textbf{Rôle} & \textbf{Autorisé (préfixes API Gateway)} & \textbf{Restreint / interdit} \\
+\midrule
+\texttt{admin} & Clients, produits, fournisseurs, bons d'achat, commandes, factures, métriques tableau de bord. & Aucune restriction supplémentaire dans la configuration actuelle du prototype. \\
+\midrule
+\texttt{sales} & Clients, produits, fournisseurs, bons d'achat, commandes, factures, métriques. & Politique métier : un affinement possible consisterait à retirer au commercial certaines actions d'achat si l'entreprise le souhaite (évolution). \\
+\midrule
+\texttt{inventory} & Produits, fournisseurs, bons d'achat, commandes. & Pas d'accès aux \textbf{clients} ni aux \textbf{factures} ; pas d'endpoint \texttt{/api/dashboard/metrics} avec la configuration actuelle. \\
+\midrule
+\texttt{accounting} & Factures, métriques tableau de bord. & Pas d'accès direct aux clients, ni au catalogue produit, ni au procurement via les préfixes configurés. \\
+\bottomrule
+\end{tabular}
+\caption{Matrice des droits telle qu'implémentée côté passerelle.}
+\end{table}
+
+\noindent\textit{Note interface :} certaines entrées de menu peuvent rester visibles pour tous les utilisateurs connectés alors que l'API refuse l'action (\texttt{403 Forbidden}) ; une évolution consiste à masquer dynamiquement les écrans selon le rôle.
+
+% -----------------------------------------------------------------------------
+\section{Principaux points d'API (synthèse textuelle)}
+Sans illustration, on résume les familles d'endpoints exposées derrière la passerelle : \texttt{/api/customers}, \texttt{/api/products} (dont \texttt{low-stock} et \texttt{stock-adjust}), \texttt{/api/suppliers}, \texttt{/api/purchase-orders} (dont réception), \texttt{/api/orders} (création, lecture, mise à jour de statut), \texttt{/api/invoices} (création, lecture, mise à jour de statut, parfois par commande), \texttt{/api/auth/login}, \texttt{/api/dashboard/metrics}. Les chemins exacts et verbes HTTP sont consultables dans le code source de chaque service.
+
+% -----------------------------------------------------------------------------
+\section{Déploiement et exécution}
+Le dépôt fournit un fichier \texttt{docker-compose.yml} orchestrant les bases MongoDB, les cinq services backend, la passerelle et le frontend. Variables d'environnement notables : URI Mongo par service, URL des services appelés en chaîne (ex.\ commande vers produit, client, facture), secret \texttt{AUTH\_SECRET} pour la signature des jetons. Un rebuild des images est nécessaire après modification du code pour refléter les changements dans les conteneurs.
+
+% -----------------------------------------------------------------------------
+\section{Tests et validation}
+La validation du prototype repose sur des \textbf{tests manuels} : parcours utilisateur dans l'interface, vérification des réponses HTTP (codes \texttt{200}, \texttt{201}, \texttt{400}, \texttt{401}, \texttt{403}, \texttt{404}, etc.) et contrôle de cohérence stock / commande / facture. Des \textbf{tests automatisés} (intégration continue) ne font pas partie du périmètre minimal livré mais constituent une extension recommandée.
+
+% -----------------------------------------------------------------------------
+\section{Sécurité, risques et limites}
+\begin{itemize}[noitemsep]
+  \item Jetons signés maison : à terme, migration possible vers des \textbf{JWT} standards et une autorité d'authentification dédiée.
+  \item Mots de passe de démonstration en clair dans la passerelle : \textbf{inacceptable en production} ; prévoir hachage (bcrypt, Argon2) et stockage en base ou annuaire.
+  \item Pas de chiffrement TLS détaillé dans le périmètre du rapport : en production, \textbf{HTTPS} obligatoire entre clients et passerelle.
+  \item Cohérence distribuée : le prototype utilise des compensations simples (ex.\ stock) mais pas encore de modèle de \textbf{saga} complet ni d'\textbf{idempotence} systématique des écritures.
+\end{itemize}
+
+% -----------------------------------------------------------------------------
+\section{Perspectives et travaux futurs}
+\begin{itemize}[noitemsep]
+  \item Module \textbf{livraisons} (transporteur, preuve de dépôt, suivi).
+  \item \textbf{Paiement en ligne} ou rapprochement bancaire, relances, échéancier client.
+  \item \textbf{Reporting} : exports PDF/Excel, marges, rotation des stocks, tableaux de bord par période.
+  \item Gestion centralisée des \textbf{utilisateurs} et RBAC configurable ; \textbf{journal d'audit} métier.
+  \item Suite de \textbf{tests d'intégration} et charge légère sur la passerelle.
+  \item Déploiement \textbf{Kubernetes} pour la haute disponibilité et l'élasticité.
+\end{itemize}
+
+% -----------------------------------------------------------------------------
+\section{Conclusion}
+Le prototype réalisé illustre une mise en œuvre concrète d'un SI intégré «\,ERP léger\,» pour la distribution : microservices Node.js, persistance MongoDB segmentée, passerelle sécurisée par rôles, et interface React. Les flux vente, achat fournisseur et facturation sont reliés de manière exploitable, tout en laissant une marge d'évolution importante vers un déploiement industriel (sécurité renforcée, tests, supervision, conformité).
+
+% -----------------------------------------------------------------------------
+\begin{thebibliography}{99}
+
+\bibitem{docker}
+Docker Inc.
+\newblock \emph{Documentation Docker}.
+\newblock \url{https://docs.docker.com}
+
+\bibitem{mongo}
+MongoDB Inc.
+\newblock \emph{MongoDB Manual}.
+\newblock \url{https://www.mongodb.com/docs/}
+
+\bibitem{express}
+OpenJS Foundation.
+\newblock \emph{Express.js}.
+\newblock \url{https://expressjs.com}
+
+\bibitem{react}
+Meta.
+\newblock \emph{React — Documentation}.
+\newblock \url{https://react.dev}
+
+\end{thebibliography}
+
+\end{document}
